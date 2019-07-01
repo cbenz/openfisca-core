@@ -221,7 +221,6 @@ class ComputationLog:
             print(line)  # noqa T001
 
 
-
 class PerformanceLog:
 
     def __init__(self, full_tracer):
