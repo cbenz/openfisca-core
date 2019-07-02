@@ -26,7 +26,7 @@ class TaxBenefitSystem:
 
     def entities_by_singular(self):
         return {}
-    
+  
     def entities_plural(self):
         return {}
 
@@ -35,7 +35,6 @@ class TaxBenefitSystem:
 
     def get_variable(self, variable_name, check_existence = True):
         return self.variables.get(variable_name)
-
 
     def clone(self):
         return TaxBenefitSystem()
@@ -139,7 +138,7 @@ def test_extensions_order():
 
 
 def test_performance():
-    test = {'input': {'salary': {'2017-01': 2000}}, 'output':{'salary': {'2017-01': 2000}}}
+    test = {'input': {'salary': {'2017-01': 2000}}, 'output': {'salary': {'2017-01': 2000}}}
     test_item = TestItem(test)
     test_item.options = {'performance': True}
 
