@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import json
-
 from typing import List, Dict
 from collections import ChainMap
 
