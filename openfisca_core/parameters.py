@@ -4,7 +4,9 @@
 """Handle legislative parameters."""
 
 
+from collections import OrderedDict
 import copy
+from pathlib import Path
 from typing import Iterable, Optional, Dict, List, Union
 import logging
 import os
@@ -55,6 +57,24 @@ def dict_no_duplicate_constructor(loader, node, deep=False):
 
 yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, dict_no_duplicate_constructor, Loader = Loader)
 yaml.add_constructor('tag:yaml.org,2002:timestamp', date_constructor, Loader = Loader)
+
+
+def represent_ordereddict(dumper, data):
+    value = []
+
+    for item_key, item_value in data.items():
+        node_key = dumper.represent_data(item_key)
+        node_value = dumper.represent_data(item_value)
+
+        value.append((node_key, node_value))
+
+    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+
+yaml.add_representer(OrderedDict, represent_ordereddict)
+
+
+def without_none_values(d):
+    return {k: v for k, v in d.items() if v is not None}
 
 
 class ParameterNotFound(AttributeError):
@@ -275,6 +295,18 @@ class Parameter(object):
     def get_descendants(self):
         return iter(())
 
+    def to_yaml(self):
+        """Return a representation of the Parameter ready to be serialized to YAML."""
+        return without_none_values({
+            "description": self.description,
+            "documentation": self.documentation,
+            "metadata": self.metadata,
+            "values": OrderedDict([
+                (value.instant_str, value.value)
+                for value in self.values_list
+            ]),
+        })
+
 
 class ParameterAtInstant(object):
     """
@@ -488,6 +520,14 @@ class ParameterNode(object):
             setattr(clone, child_key, child)
 
         return clone
+
+    def to_yaml(self):
+        """Return a representation of the ParameterNode ready to be serialized to YAML."""
+        return without_none_values({
+            "description": self.description,
+            "documentation": self.documentation,
+            "metadata": self.metadata,
+        })
 
 
 class ParameterNodeAtInstant(object):
@@ -849,6 +889,26 @@ def load_parameter_file(file_path, name = ''):
         return ParameterNode(name, directory_path = file_path)
     data = _load_yaml_file(file_path)
     return _parse_child(name, data, file_path)
+
+
+def save_parameters_to_dir(node: Union[Parameter, ParameterNode], dir_path: Path):
+    def dump_node(file_basename: str):
+        file_path = dir_path / "{}.yaml".format(file_basename)
+        node_text = yaml.dump(node.to_yaml(), allow_unicode=True)
+        file_path.write_text(node_text)
+
+    if isinstance(node, Parameter):
+        file_basename = node.name.split(".")[-1]
+        dump_node(file_basename=file_basename)
+    else:
+        dump_node(file_basename="index")
+        for name, sub_node in node.children.items():
+            if isinstance(sub_node, Parameter):
+                save_parameters_to_dir(node=sub_node, dir_path=dir_path)
+            else:
+                sub_dir = dir_path / name
+                sub_dir.mkdir(exist_ok=True)
+                save_parameters_to_dir(node=sub_node, dir_path=sub_dir)
 
 
 def _parse_child(child_name, child, child_path):
