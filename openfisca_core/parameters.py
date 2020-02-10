@@ -894,7 +894,7 @@ def load_parameter_file(file_path, name = ''):
 def save_parameters_to_dir(node: Union[Parameter, ParameterNode], dir_path: Path):
     def dump_node(file_basename: str):
         file_path = dir_path / "{}.yaml".format(file_basename)
-        node_text = yaml.dump(node.to_yaml(), allow_unicode=True)
+        node_text = yaml.dump(node.to_yaml(), allow_unicode=True, default_flow_style=False, sort_keys=False)
         file_path.write_text(node_text)
 
     if isinstance(node, Parameter):
