@@ -302,7 +302,7 @@ class Parameter(object):
             "documentation": self.documentation,
             "metadata": self.metadata,
             "values": OrderedDict([
-                (value.instant_str, value.value)
+                (value.instant_str, {"value": value.value})
                 for value in self.values_list
             ]),
         })
@@ -856,6 +856,14 @@ class Scale(object):
 
         return clone
 
+    def to_yaml(self):
+        """Return a representation of the Scale ready to be serialized to YAML."""
+        return without_none_values({
+            "brackets": self.brackets,
+            "description": self.description,
+            "metadata": self.metadata,
+        })
+
 
 class Bracket(ParameterNode):
     """
@@ -897,7 +905,7 @@ def save_parameters_to_dir(node: Union[Parameter, ParameterNode], dir_path: Path
         node_text = yaml.dump(node.to_yaml(), allow_unicode=True, default_flow_style=False, sort_keys=False)
         file_path.write_text(node_text)
 
-    if isinstance(node, Parameter):
+    if isinstance(node, (Parameter, Scale)):
         file_basename = node.name.split(".")[-1]
         dump_node(file_basename=file_basename)
     else:
