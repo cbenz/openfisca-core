@@ -300,12 +300,15 @@ class Parameter(object):
         return without_none_values({
             "description": self.description,
             "documentation": self.documentation,
-            "metadata": self.metadata,
-            "values": OrderedDict([
-                (value.instant_str, {"value": value.value})
-                for value in self.values_list
-            ]),
+            "metadata": self.metadata or None,
+            "values": self.values_as_yaml(),
         })
+
+    def values_as_yaml(self):
+        return OrderedDict([
+            (value.instant_str, {"value": value.value})
+            for value in self.values_list
+        ])
 
 
 class ParameterAtInstant(object):
@@ -526,7 +529,7 @@ class ParameterNode(object):
         return without_none_values({
             "description": self.description,
             "documentation": self.documentation,
-            "metadata": self.metadata,
+            "metadata": self.metadata or None,
         })
 
 
@@ -859,9 +862,9 @@ class Scale(object):
     def to_yaml(self):
         """Return a representation of the Scale ready to be serialized to YAML."""
         return without_none_values({
-            "brackets": self.brackets,
+            "brackets": [bracket.to_yaml() for bracket in self.brackets],
             "description": self.description,
-            "metadata": self.metadata,
+            "metadata": self.metadata or None,
         })
 
 
@@ -870,6 +873,15 @@ class Bracket(ParameterNode):
         A scale bracket.
     """
     _allowed_keys = set(['amount', 'threshold', 'rate', 'average_rate', 'base'])
+
+    def to_yaml(self):
+        """Return a representation of the Bracket ready to be serialized to YAML."""
+        yaml_dict = {}
+        for key in self._allowed_keys:
+            value = getattr(self, key, None)
+            if value is not None:
+                yaml_dict[key] = value.values_as_yaml()
+        return OrderedDict(sorted(without_none_values(yaml_dict).items()))
 
 
 def _load_yaml_file(file_path):
@@ -899,11 +911,13 @@ def load_parameter_file(file_path, name = ''):
     return _parse_child(name, data, file_path)
 
 
-def save_parameters_to_dir(node: Union[Parameter, ParameterNode], dir_path: Path):
+def save_parameters_to_dir(node: Union[Parameter, Scale, ParameterNode], dir_path: Path):
     def dump_node(file_basename: str):
         file_path = dir_path / "{}.yaml".format(file_basename)
-        node_text = yaml.dump(node.to_yaml(), allow_unicode=True, default_flow_style=False, sort_keys=False)
-        file_path.write_text(node_text)
+        node_yaml = node.to_yaml()
+        if node_yaml:
+            node_text = yaml.dump(node_yaml, allow_unicode=True, default_flow_style=False, sort_keys=False)
+            file_path.write_text(node_text)
 
     if isinstance(node, (Parameter, Scale)):
         file_basename = node.name.split(".")[-1]
@@ -911,7 +925,7 @@ def save_parameters_to_dir(node: Union[Parameter, ParameterNode], dir_path: Path
     else:
         dump_node(file_basename="index")
         for name, sub_node in node.children.items():
-            if isinstance(sub_node, Parameter):
+            if isinstance(sub_node, (Parameter, Scale)):
                 save_parameters_to_dir(node=sub_node, dir_path=dir_path)
             else:
                 sub_dir = dir_path / name
