@@ -24,7 +24,7 @@ def main():
     if not args.source_dir.is_dir():
         parser.error("Invalid source_dir")
     if not args.target_dir.is_dir():
-        parser.error("Invalid target_dir")
+        args.target_dir.mkdir()
 
     parameters = load_parameter_file(args.source_dir)
     save_parameters_to_dir(parameters, args.target_dir)
