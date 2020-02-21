@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Dict, List, Union
 import logging
 import os
+import re
 import sys
 import traceback
 
@@ -917,6 +918,9 @@ def save_parameters_to_dir(node: Union[Parameter, Scale, ParameterNode], dir_pat
         node_yaml = node.to_yaml()
         if node_yaml:
             node_text = yaml.dump(node_yaml, allow_unicode=True, default_flow_style=False, sort_keys=False)
+            # Hack: remove quotes from dict keys containing dates.
+            # Cf https://github.com/fpagnoux/baremes-ipp-parser/blob/master/bareme_ipp_parsers/commons.py
+            node_text = re.sub(r"'(\d{4}-\d{2}-\d{2})':", r"\1:", node_text)
             file_path.write_text(node_text)
 
     if isinstance(node, (Parameter, Scale)):
